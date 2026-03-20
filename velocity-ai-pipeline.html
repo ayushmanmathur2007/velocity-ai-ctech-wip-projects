@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Velocity AI — Active Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --surface: #12131a;
+    --surface-hover: #1a1b25;
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --text: #e8e8ed;
+    --text-dim: #8a8a9a;
+    --text-muted: #55556a;
+    --accent-blue: #4d7cff;
+    --accent-cyan: #22d3ee;
+    --accent-green: #34d399;
+    --accent-amber: #fbbf24;
+    --accent-rose: #f43f5e;
+    --accent-violet: #a78bfa;
+    --google: #4285F4;
+    --youtube: #FF0000;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --radius-pill: 100px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient glow */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(77,124,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 32px 64px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .header .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent-blue);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eyebrow .pulse {
+    width: 6px; height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse 2s ease infinite;
+  }
+
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 10px;
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease 0.15s both;
+  }
+
+  .stat {
+    flex: 1;
+    text-align: center;
+    padding: 16px 12px;
+    border-radius: 10px;
+    cursor: default;
+    transition: background 0.2s;
+  }
+
+  .stat:hover { background: var(--surface-hover); }
+
+  .stat .num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+  }
+
+  /* Filter bar */
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s ease 0.25s both;
+  }
+
+  .filter-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.25s;
+    user-select: none;
+  }
+
+  .filter-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  .filter-btn.active {
+    background: rgba(77,124,255,0.12);
+    border-color: rgba(77,124,255,0.3);
+    color: var(--accent-blue);
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--card-accent, var(--accent-blue)), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card.expanded {
+    background: var(--surface-hover);
+    border-color: rgba(77,124,255,0.15);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .card-top .client-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .client-icon.google {
+    background: rgba(66,133,244,0.12);
+    color: var(--google);
+  }
+
+  .client-icon.youtube {
+    background: rgba(255,0,0,0.1);
+    color: var(--youtube);
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.3px;
+    line-height: 1.3;
+    flex: 1;
+    margin-right: 12px;
+  }
+
+  .card-domain {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    margin-bottom: 12px;
+  }
+
+  .domain-marketing { background: rgba(168,85,247,0.12); color: #c084fc; }
+  .domain-finance { background: rgba(34,211,238,0.1); color: var(--accent-cyan); }
+  .domain-business-ops { background: rgba(251,191,36,0.1); color: var(--accent-amber); }
+  .domain-cust-solutions { background: rgba(52,211,153,0.1); color: var(--accent-green); }
+
+  .card-desc {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+
+  .card-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid;
+  }
+
+  .tag-type {
+    border-color: rgba(77,124,255,0.25);
+    color: var(--accent-blue);
+    background: rgba(77,124,255,0.06);
+  }
+
+  .tag-complexity-high {
+    border-color: rgba(244,63,94,0.25);
+    color: var(--accent-rose);
+    background: rgba(244,63,94,0.06);
+  }
+
+  .tag-complexity-medium {
+    border-color: rgba(251,191,36,0.25);
+    color: var(--accent-amber);
+    background: rgba(251,191,36,0.06);
+  }
+
+  .tag-stage {
+    border-color: rgba(52,211,153,0.25);
+    color: var(--accent-green);
+    background: rgba(52,211,153,0.06);
+  }
+
+  .tag-stage-review {
+    border-color: rgba(167,139,250,0.25);
+    color: var(--accent-violet);
+    background: rgba(167,139,250,0.06);
+  }
+
+  /* Expanded detail */
+  .card-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), margin 0.3s, opacity 0.3s;
+    opacity: 0;
+    margin-top: 0;
+  }
+
+  .card.expanded .card-detail {
+    max-height: 200px;
+    opacity: 1;
+    margin-top: 16px;
+  }
+
+  .detail-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 14px;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .detail-row .dl { color: var(--text-muted); }
+  .detail-row .dv { color: var(--text-dim); font-weight: 500; }
+
+  .expand-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+  }
+
+  .card:hover .expand-hint { color: var(--text-dim); }
+
+  /* Hidden cards */
+  .card.hidden {
+    display: none;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp 0.6s ease 0.5s both;
+  }
+
+  .footer p {
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .footer .brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 32px 16px 48px; }
+    .header h1 { font-size: 28px; }
+    .stats-bar { flex-wrap: wrap; }
+    .stat { min-width: calc(50% - 4px); }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="eyebrow"><span class="pulse"></span> Velocity AI Pipeline — Live</div>
+    <h1>Unlocking <span>Complex, High-Value</span> Mandates</h1>
+    <p class="subtitle">From 'Idea' to 'Prototype' in weeks. A snapshot of 9 active AI mandates across Google &amp; YouTube — each solving real operational pain.</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="num">9</div>
+      <div class="label">Active Mandates</div>
+    </div>
+    <div class="stat">
+      <div class="num">5</div>
+      <div class="label">Agentic AI</div>
+    </div>
+    <div class="stat">
+      <div class="num">2</div>
+      <div class="label">Predictive AI</div>
+    </div>
+    <div class="stat">
+      <div class="num">4</div>
+      <div class="label">High Complexity</div>
+    </div>
+    <div class="stat">
+      <div class="num">2</div>
+      <div class="label">In Prototype</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All Mandates</button>
+    <button class="filter-btn" data-filter="google">Google</button>
+    <button class="filter-btn" data-filter="youtube">YouTube</button>
+    <button class="filter-btn" data-filter="high">High Complexity</button>
+    <button class="filter-btn" data-filter="agentic">Agentic AI</button>
+    <button class="filter-btn" data-filter="predictive">Predictive AI</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">
+    <div class="brand">LatentView Analytics × Velocity AI</div>
+    <p>Confidential — For internal stakeholder review only</p>
+  </div>
+</div>
+
+<script>
+const mandates = [
+  {
+    title: "Agentic Personas",
+    client: "youtube",
+    domain: "Marketing",
+    domainClass: "domain-marketing",
+    desc: "Generate \"Agentic Personas\" from survey data to simulate focus groups instantly — replacing slow, expensive human panels.",
+    type: "Agentic AI",
+    complexity: "High",
+    stage: "Discovery",
+    impact: "Eliminates weeks of panel recruitment",
+    team: "Marketing Insights Pod",
+    accentColor: "var(--accent-rose)"
+  },
+  {
+    title: "Agentic Survey Analyst",
+    client: "youtube",
+    domain: "Marketing",
+    domainClass: "domain-marketing",
+    desc: "An autonomous agent translating natural language queries into deep survey insights — removing the vendor request-response lag.",
+    type: "Agentic AI",
+    complexity: "Medium",
+    stage: "Discovery",
+    impact: "Real-time survey intelligence",
+    team: "Marketing Analytics Pod",
+    accentColor: "var(--accent-violet)"
+  },
+  {
+    title: "Creative Success Predictor",
+    client: "youtube",
+    domain: "Marketing",
+    domainClass: "domain-marketing",
+    desc: "A predictive model scoring new creative assets against historical success metrics before launch.",
+    type: "Predictive AI",
+    complexity: "Medium",
+    stage: "Discovery",
+    impact: "Pre-launch creative optimization",
+    team: "Creative Strategy Pod",
+    accentColor: "var(--accent-cyan)"
+  },
+  {
+    title: "Gift Card Ops Automation",
+    client: "google",
+    domain: "Finance",
+    domainClass: "domain-finance",
+    desc: "Automate manual extraction and summarization for gift card processing — targeting work currently requiring ~82 human agents.",
+    type: "Automation",
+    complexity: "High",
+    stage: "PRD Submitted",
+    impact: "~82 agent hours reclaimed",
+    team: "Finance Automation Pod",
+    accentColor: "var(--accent-amber)"
+  },
+  {
+    title: "Invoice Validation Agent",
+    client: "google",
+    domain: "Finance",
+    domainClass: "domain-finance",
+    desc: "A Validation Agent to autonomously screen and verify invoice uploads, reducing compliance risk.",
+    type: "Agentic AI",
+    complexity: "Medium",
+    stage: "PRD Submitted",
+    impact: "Automated compliance screening",
+    team: "Finance Integrity Pod",
+    accentColor: "var(--accent-green)"
+  },
+  {
+    title: "Creator Signal Validator",
+    client: "youtube",
+    domain: "Business Ops",
+    domainClass: "domain-business-ops",
+    desc: "A secondary validation layer to audit the accuracy of in-house sentiment and intent models for creator conversations.",
+    type: "Agentic AI",
+    complexity: "High",
+    stage: "Prototype In Review",
+    impact: "Model accuracy audit layer",
+    team: "Creator Ops Pod",
+    accentColor: "var(--accent-rose)"
+  },
+  {
+    title: "Intelligent Insights System",
+    client: "google",
+    domain: "Cust Solutions",
+    domainClass: "domain-cust-solutions",
+    desc: "A proactive forecasting layer sitting on top of dashboards to identify QoQ patterns and customer feedback trends.",
+    type: "Predictive AI",
+    complexity: "Medium",
+    stage: "Prototype In Review",
+    impact: "Proactive trend detection",
+    team: "Customer Solutions Pod",
+    accentColor: "var(--accent-blue)"
+  },
+  {
+    title: "Data Anomaly Detection System",
+    client: "google",
+    domain: "Business Ops",
+    domainClass: "domain-business-ops",
+    desc: "Assess and prevent critical database events such as deletions or destructive transformations before they occur.",
+    type: "Agentic AI",
+    complexity: "High",
+    stage: "Discovery",
+    impact: "Preemptive data protection",
+    team: "Data Integrity Pod",
+    accentColor: "var(--accent-cyan)"
+  },
+  {
+    title: "Procurement Management Agent",
+    client: "youtube",
+    domain: "Business Ops",
+    domainClass: "domain-business-ops",
+    desc: "YouTube operations manage thousands of external workforce teams — this agent enables reliable, queryable performance tracking.",
+    type: "Agentic AI",
+    complexity: "High",
+    stage: "Discovery",
+    impact: "Workforce performance visibility",
+    team: "Procurement Ops Pod",
+    accentColor: "var(--accent-violet)"
+  }
+];
+
+function clientIcon(client) {
+  if (client === 'google') return `<div class="client-icon google"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg></div>`;
+  return `<div class="client-icon youtube"><svg width="16" height="12" viewBox="0 0 24 18"><path fill="#FF0000" d="M23.5 3.5a3 3 0 00-2.1-2.1C19.5.9 12 .9 12 .9s-7.5 0-9.4.5A3 3 0 00.5 3.5C0 5.4 0 9 0 9s0 3.6.5 5.5a3 3 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 002.1-2.1C24 12.6 24 9 24 9s0-3.6-.5-5.5z"/><path fill="#FFF" d="M9.6 12.8V5.2l6.3 3.8-6.3 3.8z"/></svg></div>`;
+}
+
+function stageClass(stage) {
+  return stage.includes('Prototype') || stage.includes('PRD') ? 'tag-stage-review' : 'tag-stage';
+}
+
+function renderCards(filter) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  mandates.forEach((m, i) => {
+    let show = filter === 'all';
+    if (filter === 'google' && m.client === 'google') show = true;
+    if (filter === 'youtube' && m.client === 'youtube') show = true;
+    if (filter === 'high' && m.complexity === 'High') show = true;
+    if (filter === 'agentic' && m.type === 'Agentic AI') show = true;
+    if (filter === 'predictive' && m.type === 'Predictive AI') show = true;
+
+    if (!show) return;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--card-accent', m.accentColor);
+    card.style.animationDelay = `${i * 0.06}s`;
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="card-title">${m.title}</div>
+        ${clientIcon(m.client)}
+      </div>
+      <span class="card-domain ${m.domainClass}">${m.domain}</span>
+      <div class="card-desc">${m.desc}</div>
+      <div class="card-tags">
+        <span class="tag tag-type">${m.type}</span>
+        <span class="tag ${m.complexity === 'High' ? 'tag-complexity-high' : 'tag-complexity-medium'}">${m.complexity} Complexity</span>
+        <span class="tag ${stageClass(m.stage)}">${m.stage}</span>
+      </div>
+      <div class="card-detail">
+        <div class="detail-divider"></div>
+        <div class="detail-row"><span class="dl">Expected Impact</span><span class="dv">${m.impact}</span></div>
+        <div class="detail-row"><span class="dl">Delivery Team</span><span class="dv">${m.team}</span></div>
+        <div class="detail-row"><span class="dl">Client</span><span class="dv">${m.client === 'google' ? 'Google' : 'YouTube'}</span></div>
+      </div>
+      <div class="expand-hint">Click to expand</div>
+    `;
+
+    card.addEventListener('click', () => {
+      card.classList.toggle('expanded');
+      card.querySelector('.expand-hint').textContent = card.classList.contains('expanded') ? 'Click to collapse' : 'Click to expand';
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCards(btn.dataset.filter);
+  });
+});
+
+renderCards('all');
+</script>
+
+</body>
+</html>
